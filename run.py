@@ -44,7 +44,7 @@ def downloadData(*arguments):
                     print(x["itemid"])
                 else:
                     print("https://cf.shopee.vn/file/" + y)
-                    #saveImage(directory+ "/" +str(y) + ".jpg", "https://cf.shopee.vn/file/" + y)
+                    saveImage(directory+ "/" +str(y) + ".jpg", "https://cf.shopee.vn/file/" + y)
             
         print("Done")
     except :
