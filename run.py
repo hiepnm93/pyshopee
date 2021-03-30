@@ -36,15 +36,15 @@ def downloadData(*arguments):
             except:
                 break
             
-            f.writelines(str(x["itemid"]) + "|" + str(strImage))
+            f.writelines(str(x["itemid"]) + "|" + str(strImage)+ '\n')
 
-            f.writelines(str(x["itemid"]) + "|" + x["name"] + "|" + (infoItemFull["item"]["description"] ))    
+            f.writelines(str(x["itemid"]) + "|" + x["name"] + "|" + (infoItemFull["item"]["description"] )+ '\n')    
             for y in x["images"]:
                 if(len(str(y)) < 32):
                     print(x["itemid"])
                 else:
                     print("https://cf.shopee.vn/file/" + y)
-                    saveImage(directory+ "/" +str(y) + ".jpg", "https://cf.shopee.vn/file/" + y)
+                    #saveImage(directory+ "/" +str(y) + ".jpg", "https://cf.shopee.vn/file/" + y)
             
         print("Done")
     except :

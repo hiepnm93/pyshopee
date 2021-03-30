@@ -5,7 +5,7 @@ import json
 import sys
 def getUserNameShopeeFromLinkShop(link_shopee):
     try:
-        x = re.match("^(https:\/\/shopee\.vn\/)([a-zA-Z0-9_]+)", link_shopee)
+        x = re.match("^(https:\/\/shopee\.vn\/)([a-zA-Z0-9_.]+)", link_shopee)
         return x.group(2)
     except :
         return ""
@@ -69,6 +69,7 @@ def shopIdFromID(link_shopee):
     except :
         e = sys.exc_info()[0]
         print( "<p>Error shopIdFromID: %s</p>" % e )
+        print(sys.exc_info() )
         return "", ""
 
 def searchItemsShopee(shopid,start_number=0, limit=30, shopName ="shopName"):
