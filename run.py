@@ -1,72 +1,102 @@
+# encoding: utf-8
 import os 
 import sys 
 import multiprocessing as mp
 import codecs
 import requests
-
+import json
 currentdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
-from hiepnm import fileDirectory
-from hiepnm import util
+from pyshopee import fileDirectory
+from pyshopee import util
+
 
 def downloadData(*arguments):
-    nameShop = arguments[0][1]
-    items = arguments[2][1]
-    shopId = arguments[1][1]
-    directory = "shop/" + nameShop
-    fileDirectory.checkAndCreadDirectory(directory)
-    listShopAndItem = {}
-    for x in items:
-        listShopAndItem[x] = util.getItem(x, shopId)
+    try:
+        nameShop = arguments[2]
+        items = arguments[1]
+        shopId = arguments[0]
+        directory = "shop/" + nameShop
+        fileDirectory.checkAndCreadDirectory(directory)
+        listShopAndItem = {}
+        f = open("shop/"+str(nameShop)+".txt", "a", encoding="utf-8")
         
-    for x in items:
-        for y in listShopAndItem[x]["item"]["images"]:
-            print("https://cf.shopee.vn/file/" + y)
-            saveImage(directory+ "/" +str(y) + ".jpg", "https://cf.shopee.vn/file/" + y)
-        #print(x, listShopAndItem[x]["item"]["description"])
-        #print("https://cf.shopee.vn/file/" + listShopAndItem[x]["item"]["images"])
-        #saveImage(directory+ "/" + str(x) + listShopAndItem[x]["item"]["images"] + ".jpg", "https://cf.shopee.vn/file/" + listShopAndItem[x]["item"]["images"])
-        # f = codecs.open(directory + "/" +nameShop+  str(x) +".txt", "w")
-        # f.write(listShopAndItem[x]["item"]["description"])
-        # f.close()
-    #print("Done")
-def saveImage(directory, pic_url):
-    with open(directory, 'wb') as handle:
-        response = requests.get(pic_url, stream=True)
-        if not response.ok:
-            print(response)
-        for block in response.iter_content(1024):
-            if not block:
+        for x in items:
+            
+            try:
+                infoItemFull = util.getItem(x["itemid"], shopId)
+            except:
+                infoItemFull = []
+                print("error")
+            if(len(infoItemFull) == 0):
                 break
-            handle.write(block)
+            try:
+                strImage = ",".join(x["images"])
+            except:
+                break
+            
+            f.writelines(str(x["itemid"]) + "|" + str(strImage))
+
+            f.writelines(str(x["itemid"]) + "|" + x["name"] + "|" + (infoItemFull["item"]["description"] ))    
+            for y in x["images"]:
+                if(len(str(y)) < 32):
+                    print(x["itemid"])
+                else:
+                    print("https://cf.shopee.vn/file/" + y)
+                    #saveImage(directory+ "/" +str(y) + ".jpg", "https://cf.shopee.vn/file/" + y)
+            
+        print("Done")
+    except :
+        print(sys.exc_info())
+    finally:
+        f.close()
+
+def saveImage(directory, pic_url):
+    try:
+        with open(directory, 'wb') as handle:
+            response = requests.get(pic_url, stream=True)
+            if not response.ok:
+                print(response)
+            for block in response.iter_content(1024):
+                if not block:
+                    break
+                handle.write(block)
+    except :
+        e = sys.exc_info()[0]
+        print( "<p>Error saveImage : %s</p>" % e )
 
 if __name__ == '__main__':
-    pool = mp.Pool(processes=4)
+    
     try:
         f = open("list_url_shop.txt")
         listURLShop = f.readlines()
+        f.close()
+
+        pool = mp.Pool(processes=12)
         results = pool.map_async(util.shopIdFromID,listURLShop)
         listInfoShop = results.get()
-        rInfPool = pool.starmap_async(util.searchItemsShopee,listInfoShop)
-        listID = rInfPool.get()
-        listShopAndID = []
-        for x in listID:
-            objShop = dict()
-            objShop["name"] = x[2]
-            objShop["shopid"] = x[0]
-            objShop["items"] = []
-            for y in x[1]:
-                objShop["items"].append(y["itemid"])
-            listShopAndID.append(list(objShop.items()))
-            
-        rDownLoadPool = pool.starmap_async(downloadData,listShopAndID)
-    except IOError:
-        print("File list Shop khong the load")
-    finally:
-        f.close()
         pool.close()
         pool.join()
+
+
+        pool = mp.Pool(processes=12)
+        rInfPool = pool.starmap_async(util.getAllItemsShopee,listInfoShop)
+        listID = rInfPool.get()
+        pool.close()
+        pool.join()
+
+
+        with open('data.txt', 'w') as outfile:
+            json.dump(listID, outfile)
+
+        pool = mp.Pool(processes=12)
+        rDownLoadPool = pool.starmap_async(downloadData,listID)
+        pool.close()
+        pool.join()
+    except:
+        e = sys.exc_info()[0]
+        print( "<p>Error __main__ : %s</p>" % e )
 
     #directory = "abc/cdf"
     #fileDirectory.checkAndCreadDirectory(directory)

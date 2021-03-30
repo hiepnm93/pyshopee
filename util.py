@@ -10,6 +10,23 @@ def getUserNameShopeeFromLinkShop(link_shopee):
     except :
         return ""
 
+def splitPage(page, limit = 30):
+    if (page < limit):
+        return[(0, page-1)]
+    k = 1
+    if page - ((page //limit))*limit > 0:
+        k = 0
+
+    n = (page //limit) + 1 - k
+    listReturn = list()
+    
+    for x in range(n):# 1 -> 0 ,29
+        if x == n-1:
+            listReturn.append((limit*(x), page - 1))
+        else :
+            listReturn.append((limit*(x), limit*(x+1)-1))
+    return listReturn
+
 def renderIfNoneMatch(strIfNM, first = "55b03"):
     m = hashlib.md5()
     m.update(bytearray(first + strIfNM + first, "utf8") )
@@ -47,26 +64,23 @@ def shopIdFromID(link_shopee):
         get_shop_detail_object = json.loads(response.text)
         shopid  = get_shop_detail_object["data"]["shopid"]
         item_count  = get_shop_detail_object["data"]["item_count"]
-        return shopid, item_count, user_name, get_shop_detail_object["data"]
+        list_page = splitPage(item_count)
+        return shopid, item_count, user_name, get_shop_detail_object["data"], list_page
     except :
         e = sys.exc_info()[0]
         print( "<p>Error shopIdFromID: %s</p>" % e )
         return "", ""
 
-def searchItemsShopee(*arguments):
-    shopid = arguments[0]
-    start_number = 0
-    end_number = arguments[1] -1
-    shopName = arguments[2]
+def searchItemsShopee(shopid,start_number=0, limit=30, shopName ="shopName"):
     try:
         url_searchItems = "https://shopee.vn/api/v2/search_items/?"
-        urlGetListProduce = "by=pop&order=desc&page_type=shop&version=2&limit=" + str((end_number) - (start_number) + 1) + "&match_id=" + str(shopid) + "&newest=" + str((start_number) - 1)
+        urlGetListProduce = "by=pop&order=desc&page_type=shop&version=2&limit=" + str(limit) + "&match_id=" + str(shopid) + "&newest=" + str(start_number)
         headers = {
             "authority": "shopee.vn",
             "x-shopee-language": "vi",
             "dnt": "1",
             "x-requested-with": "XMLHttpRequest",
-            "if-none-match-": renderIfNoneMatch(urlGetListProduce),
+            "if-none-match-": "55b03-" + renderIfNoneMatch(md5(urlGetListProduce)),
             "user-agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36",
             "x-api-source": "pc",
@@ -81,11 +95,23 @@ def searchItemsShopee(*arguments):
         response = requests.request("GET", url_searchItems+urlGetListProduce, headers=headers, data=payload)
         
         get_iteam_detail_object = json.loads(response.text)
-        return shopid, get_iteam_detail_object["items"], shopName
+        return get_iteam_detail_object["items"]
     except :
         e = sys.exc_info()[0]
         print( "<p>Error searchItemsShopee : %s</p>" % e )
-        return shopid, [], shopName
+        return []
+
+def getAllItemsShopee(*arguments):
+    shopid = arguments[0]
+    user_name = arguments[2]
+    listItems = []
+    for x in arguments[4]:
+        itemInX = searchItemsShopee(shopid, x[0], 30, user_name)
+        if(len(itemInX) == 0):
+            break
+        listItems += itemInX
+    return shopid, listItems, user_name
+
 
 def getItem(itemid, shopid):
     url_searchItems = "https://shopee.vn/api/v2/item/get?"
